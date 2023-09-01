@@ -5,6 +5,5 @@ import (
 )
 
 func main() {
-	contact := NewContact()
 	fmt.Println("Hello world!")
 }
