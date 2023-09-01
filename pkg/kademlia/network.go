@@ -1,9 +1,14 @@
 package d7024e
 
+import (
+	"strconv"
+)
+
 type Network struct {
 }
 
 func Listen(ip string, port int) {
+	_ = ip + ":" + strconv.Itoa(port)
 	// TODO
 }
 
