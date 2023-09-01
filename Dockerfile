@@ -12,10 +12,8 @@ FROM golang:latest
 #
 # $ docker build . -t kadlab
 
-WORKDIR /app
+WORKDIR /kademlia
 
-COPY go.mod lib/* ./
+COPY go.mod /lib/*.go ./
 
-# RUN go mod download
-
-RUN go run main.go
+CMD ["go", "run", "."]
