@@ -14,6 +14,8 @@ FROM golang:latest
 
 WORKDIR /kademlia
 
-COPY go.mod /lib/*.go ./
+COPY go.mod go.sum /lib ./
+
+RUN go mod download
 
 CMD ["go", "run", "."]
