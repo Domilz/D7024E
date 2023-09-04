@@ -1,43 +1,50 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"os/exec"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+	"net"
 )
 
 func main() {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	// x := kademlia.NewKademlia()
+	fmt.Println("Started")
+	server, err := net.ResolveUDPAddr("udp4", ":8000")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(fmt.Errorf("err", err))
 	}
+	conn, err := net.ListenUDP("udp", server)
 
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
-	if err != nil {
-		log.Fatal(err)
-	}
+	defer conn.Close()
 
-	// Loop through the containers and get their IP addresses
-	for _, container := range containers {
-		inspect, err := cli.ContainerInspect(context.Background(), container.ID)
+	buffer := make([]byte, 1024)
+	c := make(chan []byte)
+
+	go handleMessage(c)
+
+	for {
+		// Read data from the UDP connection
+		n, addr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("Error reading from UDP connection:", err)
+			continue
 		}
 
-		// Get the container's IP address from its network settings
-		ip := inspect.NetworkSettings.Networks["bridge"].IPAddress
-		fmt.Printf("Container ID: %s, IP Address: %s\n", container.ID[:10], ip)
+		c <- buffer[:n]
 
-		// Ping the container
-		pingCommand := exec.Command("ping", "-c", "4", ip)
-		pingOutput, err := pingCommand.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
+		// Print the received message
+		fmt.Printf("Received %d bytes from %s: %s\n", n, addr, string(buffer[:n]))
+	}
+}
+
+func handleMessage(c chan []byte) {
+	for {
+		select {
+		// Kollar ifall vi fått meddelande på kanalen
+		case msg := <-c:
+			switch string(msg) {
+			case "ping":
+				fmt.Println("Recieved a ping message!")
+			}
 		}
-		fmt.Println(string(pingOutput))
 	}
 }
