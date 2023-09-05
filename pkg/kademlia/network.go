@@ -20,6 +20,7 @@ func Listen(ip string, port int) {
 	if err != nil {
 		fmt.Println("Error", err)
 	}
+
 	localIP, err := net.LookupIP(hname)
 	if err != nil {
 		fmt.Println("Error", err)
@@ -29,9 +30,11 @@ func Listen(ip string, port int) {
 	p := ":" + strconv.Itoa(port)
 
 	serverAddr, err := net.ResolveUDPAddr("udp4", p)
+
 	if err != nil {
 		fmt.Println(fmt.Errorf("err", err))
 	}
+	fmt.Println("Server address:", serverAddr)
 
 	conn, err := net.ListenUDP("udp", serverAddr)
 	if err != nil {
@@ -124,6 +127,8 @@ func handleMessages(c chan []byte) {
 			switch string(msg) {
 			case "ping":
 				fmt.Println("Recieved a ping message!")
+			default:
+				fmt.Println("Other message:", string(msg))
 			}
 		}
 	}
