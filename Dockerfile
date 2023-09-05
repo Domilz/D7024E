@@ -11,6 +11,9 @@ FROM golang:latest
 # "kadlab", which you do by using the following command:
 #
 # $ docker build . -t kadlab
+RUN apt-get update
+
+RUN apt-get install -y netcat-traditional
 
 WORKDIR /app
 

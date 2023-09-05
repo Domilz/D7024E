@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/Domilz/D7024E/pkg/kademlia"
 )
@@ -10,9 +9,7 @@ import (
 func main() {
 	fmt.Println("Starting...")
 
-	go kademlia.Listen("", 8080)
-
-	kademliaNode := kademlia.NewNetwork(kademlia.NewKademlia())
+	kademlia.Listen("", 8080)
 
 	// bootstrapID := kademlia.NewKademliaID(DefaultBootstrapInput)
 
@@ -25,10 +22,5 @@ func main() {
 
 	// bootstrapContact := kademlia.NewContact(, ip)
 	// kademliaNode.Kademlia.RoutingTable.AddContact(bootstrapContact)
-
-	for {
-		time.Sleep(2 * time.Second)
-		kademliaNode.SendPingMessage()
-	}
 
 }
