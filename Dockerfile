@@ -12,10 +12,12 @@ FROM golang:latest
 #
 # $ docker build . -t kadlab
 
-WORKDIR /kademlia
+WORKDIR /app
 
-COPY go.mod go.sum /lib ./
+COPY go.mod go.sum /lib /pkg ./
 
 RUN go mod download
+
+COPY . .
 
 CMD ["go", "run", "."]

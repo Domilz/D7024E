@@ -5,9 +5,9 @@ type Kademlia struct {
 	Self         *Contact
 }
 
-func NewKademlia() Kademlia {
-	contact := NewContact(NewKademliaID("FFFFFFFF00000000000000000000000000000000"), "localhost:8000")
-	return Kademlia{
+func NewKademlia() *Kademlia {
+	contact := NewContact(NewRandomKademliaID(), "localhost:8080")
+	return &Kademlia{
 		RoutingTable: NewRoutingTable(contact),
 		Self:         &contact,
 	}
