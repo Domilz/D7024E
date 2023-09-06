@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"time"
 )
 
 type Network struct {
@@ -22,7 +24,6 @@ func NewNetwork(kademlia *Kademlia) *Network {
 }
 
 func Listen(ip string, port int, kademliaNode *Network) error {
-
 	address := ip + ":" + strconv.Itoa(port)
 
 	conn, err := UDPServer(address)
@@ -35,29 +36,46 @@ func Listen(ip string, port int, kademliaNode *Network) error {
 
 	buffer := make([]byte, 1024)
 	c := make(chan []byte)
+	remoteChan := make(chan *net.UDPAddr)
 
-	go kademliaNode.handleMessages(c)
+	go kademliaNode.handleMessages(c, remoteChan)
 
 	for {
 		// Read data from the UDP connection
-		n, addr, err := conn.ReadFromUDP(buffer)
+		n, rAddr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println("error reading from UDP connection:", err)
 			continue
 		}
 
 		c <- buffer[:n]
+		remoteChan <- rAddr
 
 		// Print the received message
-		fmt.Printf("Received %d bytes from %s: %s\n", n, addr, string(buffer[:n]))
+		fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
 	}
 
 }
 
 func (network *Network) SendPingMessage(contact *Contact) {
 	conn := UDPConnection(contact.Address)
-
+	fmt.Println("Sending ping to address,", contact.Address)
 	defer conn.Close()
+
+	ch := make(chan []byte)
+	go func() {
+		for {
+			buffer := make([]byte, 1024)
+			n, _, err := conn.ReadFromUDP(buffer)
+			fmt.Println("Our conn:", conn.LocalAddr())
+			if err != nil {
+				fmt.Println("Error reading from udp server: ", err)
+				return
+			}
+			ch <- buffer[:n]
+		}
+	}()
+
 	rpc := RPC{
 		Topic:   "ping",
 		Contact: *network.Kademlia.Self,
@@ -76,6 +94,19 @@ func (network *Network) SendPingMessage(contact *Contact) {
 	}
 
 	fmt.Println("Message sent to UDP server:", rpc)
+
+	timeout := 4 * time.Second
+
+	select {
+	case data := <-ch:
+		network.Kademlia.RoutingTable.UpdatedRecency(*contact)
+		fmt.Println("Recieved pong: ", data)
+
+	case <-time.After(timeout):
+		fmt.Println("Timeout")
+		network.Kademlia.RoutingTable.RemoveContact(*contact)
+		network.Kademlia.RoutingTable.AddContact(rpc.Contact)
+	}
 }
 
 func (network *Network) SendFindContactMessage(contact *Contact) {
@@ -105,15 +136,15 @@ func (network *Network) SendFindContactMessage(contact *Contact) {
 
 }
 
-func UDPConnection(address string) net.Conn {
+func UDPConnection(address string) *net.UDPConn {
 	serverAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		fmt.Println(fmt.Errorf("Error resolving UDPaddr for address: %s, error: %w\n", address, err))
+		fmt.Println(fmt.Errorf("error resolving UDPaddr for address: %s, error: %w", address, err))
 	}
 
 	conn, err := net.DialUDP("udp", nil, serverAddr)
 	if err != nil {
-		fmt.Println(fmt.Errorf("Error UDP dial to server: %s, error: %w", serverAddr, err))
+		fmt.Println(fmt.Errorf("error UDP dial to server: %s, error: %w", serverAddr, err))
 	}
 
 	return conn
@@ -143,25 +174,29 @@ func (network *Network) SendStoreMessage(data []byte) {
 	// TODO
 }
 
-func (network *Network) handleMessages(c chan []byte) {
-	var sender RPC
+func (network *Network) handleMessages(c chan []byte, remoteChan chan *net.UDPAddr) {
 	for {
 		select {
 		// Kollar ifall vi fått meddelande på kanalen
 		case msg := <-c:
+			var sender RPC
+			rAddr := <-remoteChan
+
 			err := json.Unmarshal(msg, &sender)
 			if err != nil {
 				fmt.Println("Unmarshal error: ", err)
 			}
+			fmt.Println("Topic:", sender.Topic)
 			switch sender.Topic {
 			case "ping":
 				fmt.Println("Recieved a ping message!")
 				fmt.Println("senderContact: ", sender.Contact)
+				HandlePing(rAddr)
 			case "find_node":
-				network.findNode(sender)
+				go network.findNode(sender)
 
 			case "find_node_response":
-				fmt.Println("response: ", sender)
+				go network.findNodeResponse(sender)
 			default:
 				fmt.Println("Other message:", string(msg))
 			}
@@ -170,7 +205,7 @@ func (network *Network) handleMessages(c chan []byte) {
 }
 
 func (network *Network) findNode(rpc RPC) {
-	closestNeigbourList := network.Kademlia.RoutingTable.FindClosestContacts(rpc.TargetID, 1)
+	closestNeigbourList := network.Kademlia.RoutingTable.FindClosestContacts(rpc.TargetID, 2)
 
 	conn := UDPConnection(rpc.Contact.Address)
 
@@ -187,5 +222,44 @@ func (network *Network) findNode(rpc RPC) {
 			fmt.Println("Marshal error: ", err)
 		}
 		conn.Write(msg)
+		time.Sleep(1 * time.Second)
 	}
+}
+
+func (network *Network) findNodeResponse(rpc RPC) {
+	bucketIndex := network.Kademlia.RoutingTable.getBucketIndex(rpc.Contact.ID)
+	bucket := network.Kademlia.RoutingTable.buckets[bucketIndex]
+	var contact Contact
+	if bucket.Len() >= bucketSize {
+		contact = bucket.list.Back().Value.(Contact)
+		network.SendPingMessage(&contact)
+		return
+	}
+	network.Kademlia.RoutingTable.AddContact(rpc.Contact)
+}
+
+func GetLocalIP() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Println(fmt.Errorf("error hostname lookup: %w", err))
+	}
+
+	localIP, err := net.LookupIP(hostname)
+	if err != nil {
+		fmt.Println(fmt.Errorf("error IP lookup: %w", err))
+	}
+
+	return string(localIP[0])
+}
+
+func HandlePing(address *net.UDPAddr) {
+	fmt.Println("Handle ping")
+	conn, err := net.DialUDP("udp", nil, address)
+	defer conn.Close()
+	if err != nil {
+		fmt.Println(fmt.Errorf("error in connection when handling ping: %w", err))
+	}
+
+	fmt.Println("Sending pong to ", address)
+	conn.Write([]byte("I live"))
 }
