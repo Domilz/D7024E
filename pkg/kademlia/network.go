@@ -22,33 +22,33 @@ func NewNetwork(kademlia *Kademlia) *Network {
 	return &Network{Kademlia: kademlia}
 }
 
-func Listen(ip string, port int) {
+func Listen(ip string, port int) error {
 
 	kademliaNode := NewNetwork(NewKademlia())
 
-	hname, err := os.Hostname()
+	hostname, err := os.Hostname()
 	if err != nil {
-		fmt.Println("Error", err)
+		return fmt.Errorf("error hostname lookup: %w", err)
 	}
 
-	localIP, err := net.LookupIP(hname)
+	localIP, err := net.LookupIP(hostname)
 	if err != nil {
-		fmt.Println("Error", err)
+		return fmt.Errorf("error IP lookup: %w", err)
 	}
 	fmt.Println("IP", localIP[0])
 
-	p := ":" + strconv.Itoa(port)
+	address := localIP[0].String() + ":" + strconv.Itoa(port)
 
-	serverAddr, err := net.ResolveUDPAddr("udp4", p)
+	serverAddr, err := net.ResolveUDPAddr("udp4", address)
 
 	if err != nil {
-		fmt.Println(fmt.Errorf("err", err))
+		return fmt.Errorf("Error resolving UDPAddr: %w", err)
 	}
 	fmt.Println("Server address:", serverAddr)
 
 	conn, err := net.ListenUDP("udp", serverAddr)
 	if err != nil {
-		fmt.Println(fmt.Errorf("err", err))
+		return fmt.Errorf("error UDP server listening: %w", err)
 	}
 
 	defer conn.Close()
@@ -57,15 +57,12 @@ func Listen(ip string, port int) {
 	c := make(chan []byte)
 
 	go kademliaNode.handleMessages(c)
-	//for {
-	//	time.Sleep(2 * time.Second)
-	//	kademliaNode.SendPingMessage()
-	//}
+
 	for {
 		// Read data from the UDP connection
 		n, addr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
-			fmt.Println("Error reading from UDP connection:", err)
+			fmt.Println("error reading from UDP connection:", err)
 			continue
 		}
 
@@ -74,28 +71,10 @@ func Listen(ip string, port int) {
 		// Print the received message
 		fmt.Printf("Received %d bytes from %s: %s\n", n, addr, string(buffer[:n]))
 	}
-
 }
 
-func (network *Network) SendPingMessage() {
-	// ips, err := net.LookupIP("kademlianodes")
-	// if err != nil {
-	// 	fmt.Println("Error resolving IP address:", err)
-	// 	return
-	// }
-
-	// for _, ip := range ips {
-	// 	fmt.Println(ip)
-	// }
-
-	bootstrapNodeHostname := os.Getenv("BOOTSTRAP_NODE_IP")
-	ips, err := net.LookupIP(bootstrapNodeHostname)
-	if err != nil {
-		fmt.Println("Error", err)
-	}
-	ip := ips[0].String() + ":" + os.Getenv("NODE_PORT")
-
-	serverAddr, err := net.ResolveUDPAddr("udp", ip)
+func (network *Network) SendPingMessage(contact *Contact) {
+	serverAddr, err := net.ResolveUDPAddr("udp", contact.Address)
 	if err != nil {
 		fmt.Println("Error resolving server address:", err)
 		return
@@ -112,6 +91,7 @@ func (network *Network) SendPingMessage() {
 		Topic:   "ping",
 		Contact: *network.Kademlia.Self,
 	}
+
 	message, err := json.Marshal(rpc)
 	if err != nil {
 		fmt.Println("Marshal ping error", err)
@@ -124,7 +104,7 @@ func (network *Network) SendPingMessage() {
 		return
 	}
 
-	fmt.Println("Message sent to UDP server:", string(message))
+	fmt.Println("Message sent to UDP server:", rpc)
 }
 
 func (network *Network) SendFindContactMessage(contact *Contact) {

@@ -16,18 +16,18 @@ const (
 )
 
 func NewKademlia() *Kademlia {
-
-	container := os.Getenv("ISBOOTSTRAP")
 	var contact Contact
 	var routingTable *RoutingTable
 
+	container := os.Getenv("ISBOOTSTRAP")
 	bootstrapNodeHostname := os.Getenv("BOOTSTRAP_NODE_IP")
 	ips, err := net.LookupIP(bootstrapNodeHostname)
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Println("error for boostrap node IP lookup:", err)
 	}
 	ip := ips[0].String() + ":" + os.Getenv("NODE_PORT")
 	bootstrap_contact := NewContact(NewKademliaID(DefaultBootstrapInput), ip)
+
 	switch container {
 	case "1":
 		contact = bootstrap_contact
@@ -35,11 +35,11 @@ func NewKademlia() *Kademlia {
 	default:
 		hostname, err := os.Hostname()
 		if err != nil {
-			fmt.Println("Error", err)
+			fmt.Println("error hostname lookup for kademlia node:", err)
 		}
 		localIP, err := net.LookupIP(hostname)
 		if err != nil {
-			fmt.Println("Error", err)
+			fmt.Println("error IP lookup for kademlia node:", err)
 		}
 
 		contact = NewContact(NewRandomKademliaID(), localIP[0].String()+":8080")
