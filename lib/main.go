@@ -22,5 +22,7 @@ func main() {
 	}
 	fmt.Println("IP", localIP[0])
 
-	kademlia.Listen(string(localIP[0]), 8080)
+	kademliaNode := kademlia.NewNetwork(kademlia.NewKademlia())
+
+	kademlia.Listen(string(localIP[0]), 8080, kademliaNode)
 }

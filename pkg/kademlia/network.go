@@ -21,9 +21,7 @@ func NewNetwork(kademlia *Kademlia) *Network {
 	return &Network{Kademlia: kademlia}
 }
 
-func Listen(ip string, port int) error {
-
-	kademliaNode := NewNetwork(NewKademlia())
+func Listen(ip string, port int, kademliaNode *Network) error {
 
 	address := ip + ":" + strconv.Itoa(port)
 
@@ -82,7 +80,6 @@ func (network *Network) SendPingMessage(contact *Contact) {
 
 func (network *Network) SendFindContactMessage(contact *Contact) {
 	closestNeighbour := network.Kademlia.RoutingTable.FindClosestContacts(contact.ID, 1)[0]
-
 	conn := UDPConnection(closestNeighbour.Address)
 
 	defer conn.Close()
@@ -174,17 +171,8 @@ func (network *Network) handleMessages(c chan []byte) {
 
 func (network *Network) findNode(rpc RPC) {
 	closestNeigbourList := network.Kademlia.RoutingTable.FindClosestContacts(rpc.TargetID, 1)
-	serverAddr, err := net.ResolveUDPAddr("udp", rpc.Contact.Address)
-	if err != nil {
-		fmt.Println("Error resolving server address:", err)
-		return
-	}
 
-	conn, err := net.DialUDP("udp", nil, serverAddr)
-	if err != nil {
-		fmt.Println("Error creating UDP connection:", err)
-		return
-	}
+	conn := UDPConnection(rpc.Contact.Address)
 
 	defer conn.Close()
 
@@ -199,7 +187,5 @@ func (network *Network) findNode(rpc RPC) {
 			fmt.Println("Marshal error: ", err)
 		}
 		conn.Write(msg)
-
 	}
-
 }
