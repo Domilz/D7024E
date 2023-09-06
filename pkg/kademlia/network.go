@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 )
 
@@ -26,29 +25,12 @@ func Listen(ip string, port int) error {
 
 	kademliaNode := NewNetwork(NewKademlia())
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return fmt.Errorf("error hostname lookup: %w", err)
-	}
+	address := ip + ":" + strconv.Itoa(port)
 
-	localIP, err := net.LookupIP(hostname)
-	if err != nil {
-		return fmt.Errorf("error IP lookup: %w", err)
-	}
-	fmt.Println("IP", localIP[0])
-
-	address := localIP[0].String() + ":" + strconv.Itoa(port)
-
-	serverAddr, err := net.ResolveUDPAddr("udp4", address)
+	conn, err := UDPServer(address)
 
 	if err != nil {
-		return fmt.Errorf("Error resolving UDPAddr: %w", err)
-	}
-	fmt.Println("Server address:", serverAddr)
-
-	conn, err := net.ListenUDP("udp", serverAddr)
-	if err != nil {
-		return fmt.Errorf("error UDP server listening: %w", err)
+		return err
 	}
 
 	defer conn.Close()
@@ -71,20 +53,11 @@ func Listen(ip string, port int) error {
 		// Print the received message
 		fmt.Printf("Received %d bytes from %s: %s\n", n, addr, string(buffer[:n]))
 	}
+
 }
 
 func (network *Network) SendPingMessage(contact *Contact) {
-	serverAddr, err := net.ResolveUDPAddr("udp", contact.Address)
-	if err != nil {
-		fmt.Println("Error resolving server address:", err)
-		return
-	}
-
-	conn, err := net.DialUDP("udp", nil, serverAddr)
-	if err != nil {
-		fmt.Println("Error creating UDP connection:", err)
-		return
-	}
+	conn := UDPConnection(contact.Address)
 
 	defer conn.Close()
 	rpc := RPC{
@@ -110,17 +83,7 @@ func (network *Network) SendPingMessage(contact *Contact) {
 func (network *Network) SendFindContactMessage(contact *Contact) {
 	closestNeighbour := network.Kademlia.RoutingTable.FindClosestContacts(contact.ID, 1)[0]
 
-	serverAddr, err := net.ResolveUDPAddr("udp", closestNeighbour.Address)
-	if err != nil {
-		fmt.Println("Error resolving server address:", err)
-		return
-	}
-
-	conn, err := net.DialUDP("udp", nil, serverAddr)
-	if err != nil {
-		fmt.Println("Error creating UDP connection:", err)
-		return
-	}
+	conn := UDPConnection(closestNeighbour.Address)
 
 	defer conn.Close()
 
@@ -143,6 +106,36 @@ func (network *Network) SendFindContactMessage(contact *Contact) {
 
 	fmt.Println("Message sent to UDP server:", string(message))
 
+}
+
+func UDPConnection(address string) net.Conn {
+	serverAddr, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Error resolving UDPaddr for address: %s, error: %w\n", address, err))
+	}
+
+	conn, err := net.DialUDP("udp", nil, serverAddr)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Error UDP dial to server: %s, error: %w", serverAddr, err))
+	}
+
+	return conn
+}
+
+func UDPServer(address string) (*net.UDPConn, error) {
+	serverAddr, err := net.ResolveUDPAddr("udp4", address)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error resolving UDPAddr: %w", err)
+	}
+	fmt.Println("Server address:", serverAddr)
+
+	conn, err := net.ListenUDP("udp", serverAddr)
+	if err != nil {
+		return nil, fmt.Errorf("error UDP server listening: %w", err)
+	}
+
+	return conn, nil
 }
 
 func (network *Network) SendFindDataMessage(hash string) {
