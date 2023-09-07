@@ -38,13 +38,19 @@ func (bucket *bucket) AddContact(contact Contact) {
 	}
 }
 
-func (bucket *bucket) RemoveBackContact() {
-	bucket.list.Remove(bucket.list.Back())
+func (bucket *bucket) RemoveBackContact(contact Contact) {
+	for e := bucket.list.Front(); e != nil; e = e.Next() {
+		nodeID := e.Value.(Contact).ID
+
+		if (contact).ID.Equals(nodeID) {
+			bucket.list.Remove(e)
+			return
+		}
+	}
 }
 
-func (bucket *bucket) UpdatedRecency() {
-	backContact := bucket.list.Back().Value.(Contact)
-	bucket.AddContact(backContact)
+func (bucket *bucket) UpdatedRecency(contact Contact) {
+	bucket.AddContact(contact)
 }
 
 // GetContactAndCalcDistance returns an array of Contacts where

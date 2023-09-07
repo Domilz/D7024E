@@ -55,6 +55,7 @@ func TestPing(t *testing.T) {
 	}
 
 	kademlia1.RoutingTable.AddContact(NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "localhost:8002"))
+	kademlia1.RoutingTable.AddContact(contact2)
 	kademlia1.RoutingTable.AddContact(NewContact(NewKademliaID("1111111300000000000000000000000000000000"), "localhost:8003"))
 	kademlia1.RoutingTable.AddContact(NewContact(NewKademliaID("1111111400000000000000000000000000000000"), "localhost:8004"))
 

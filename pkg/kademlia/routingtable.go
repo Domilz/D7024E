@@ -29,13 +29,13 @@ func (routingTable *RoutingTable) AddContact(contact Contact) {
 func (routingTable *RoutingTable) RemoveContact(contact Contact) {
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
-	bucket.RemoveBackContact()
+	bucket.RemoveBackContact(contact)
 }
 
 func (routingTable *RoutingTable) UpdatedRecency(contact Contact) {
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
-	bucket.UpdatedRecency()
+	bucket.UpdatedRecency(contact)
 
 }
 
