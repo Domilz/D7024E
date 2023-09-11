@@ -1,7 +1,5 @@
 package kademlia
 
-import "fmt"
-
 type RPC struct {
 	Topic       string      `json:"Topic"`
 	Contact     Contact     `json:"Contact"`
@@ -19,31 +17,29 @@ func (network *Network) CreateRPC(topic string, contact Contact, targetID *Kadem
 }
 
 func (network *Network) findNode(rpc RPC) RPC {
-	closestNeigbourList := network.Kademlia.RoutingTable.FindClosestContacts(rpc.TargetID, 2)
+	closestNeigbourList := network.RoutingTable.FindClosestContacts(rpc.TargetID, 2)
 
-	newRPC := network.CreateRPC("find_node_response", *network.Kademlia.Self, nil, closestNeigbourList)
+	newRPC := network.CreateRPC("find_node_response", *network.Self, nil, closestNeigbourList)
 	return newRPC
 }
 
 func (network *Network) findNodeResponse(rpc RPC) {
 	for _, contact := range rpc.ContactList {
-		bucketIndex := network.Kademlia.RoutingTable.getBucketIndex(contact.ID)
-		bucket := network.Kademlia.RoutingTable.buckets[bucketIndex]
+		bucketIndex := network.RoutingTable.getBucketIndex(contact.ID)
+		bucket := network.RoutingTable.buckets[bucketIndex]
 
 		var pingContact Contact
 		if bucket.Len() >= bucketSize {
 			pingContact = bucket.list.Back().Value.(Contact)
 			flag := network.SendPingMessage(&pingContact)
 			if flag {
-				network.Kademlia.RoutingTable.UpdatedRecency(pingContact)
+				network.RoutingTable.UpdatedRecency(pingContact)
 			} else {
-				network.Kademlia.RoutingTable.RemoveContact(pingContact)
-				fmt.Println("Remove contact done")
-				network.Kademlia.RoutingTable.AddContact(contact)
-				fmt.Println("Add contact done")
+				network.RoutingTable.RemoveContact(pingContact)
+				network.RoutingTable.AddContact(contact)
 			}
 		} else {
-			network.Kademlia.RoutingTable.AddContact(contact)
+			network.RoutingTable.AddContact(contact)
 		}
 	}
 }
