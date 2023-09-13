@@ -12,6 +12,7 @@ func TestLookup(t *testing.T) {
 	contact3 := NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "localhost:8002")
 	contact4 := NewContact(NewKademliaID("1111111400000000000000000000000000000000"), "localhost:8003")
 	contact5 := NewContact(NewKademliaID("1111111500000000000000000000000000000000"), "localhost:8004")
+	contact6 := NewContact(NewKademliaID("1111111600000000000000000000000000000000"), "localhost:8005")
 
 	kademlia1 := Kademlia{
 		Network: &Network{
@@ -43,7 +44,12 @@ func TestLookup(t *testing.T) {
 			Self:         &contact5,
 		},
 	}
-	fmt.Println("första")
+	kademlia6 := Kademlia{
+		Network: &Network{
+			RoutingTable: NewRoutingTable(contact6),
+			Self:         &contact5,
+		},
+	}
 
 	kademlia1.Network.RoutingTable.AddContact(contact2)
 	kademlia1.Network.RoutingTable.AddContact(contact3)
@@ -57,7 +63,7 @@ func TestLookup(t *testing.T) {
 	go Listen("localhost", "8002", &kademlia3)
 	go Listen("localhost", "8003", &kademlia4)
 	go Listen("localhost", "8004", &kademlia5)
-	fmt.Println("andra")
+	go Listen("localhost", "8005", &kademlia6)
 
 	contacts := kademlia1.LookupContact(contact5)
 	// contacts := kademlia1.Network.SendFindContactMessage(&contact3, contact5.ID)

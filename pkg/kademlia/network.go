@@ -36,7 +36,7 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 		go kademliaNode.Network.WriteResponse(response, rAddr, conn)
 
-		fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
+		// fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
 	}
 
 }
@@ -63,7 +63,7 @@ func (network *Network) sendMessage(address string, msg []byte) ([]byte, error) 
 		return nil, fmt.Errorf("error sending UDP message: %w", err)
 	}
 
-	fmt.Println("Message sent to UDP server:", string(msg))
+	// fmt.Println("Message sent to UDP server:", string(msg))
 
 	timeout := 4 * time.Second
 
@@ -127,18 +127,16 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 	}
 }
 
-func (network *Network) SendFindContactMessage(contact *Contact) []Contact {
-	closestNeighbour := network.RoutingTable.FindClosestContacts(contact.ID, 1)[0]
-
-	rpc := network.CreateRPC("find_node", *network.Self, contact.ID, nil)
+func (network *Network) SendFindContactMessage(contact *Contact, target *KademliaID) []Contact {
+	rpc := network.CreateRPC("find_node", *network.Self, target, nil)
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
 		fmt.Println("Json error", err)
 	}
 
-	response, err := network.sendMessage(closestNeighbour.Address, message)
-	fmt.Println("Message sent to UDP server:", string(message))
+	response, err := network.sendMessage(contact.Address, message)
+	// fmt.Println("Message sent to UDP server:", contact.Address, "With message:", string(message))
 
 	if err != nil {
 		fmt.Println("error: Node response timed out", err)
@@ -148,6 +146,7 @@ func (network *Network) SendFindContactMessage(contact *Contact) []Contact {
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}
+		// fmt.Println("Response: ", responseRPC)
 		network.findNodeResponse(responseRPC)
 		return responseRPC.ContactList
 	}

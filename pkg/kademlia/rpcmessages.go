@@ -17,7 +17,7 @@ func (network *Network) CreateRPC(topic string, contact Contact, targetID *Kadem
 }
 
 func (network *Network) findNode(rpc RPC) RPC {
-	closestNeigbourList := network.RoutingTable.FindClosestContacts(rpc.TargetID, 2)
+	closestNeigbourList := network.RoutingTable.FindClosestContacts(rpc.TargetID, bucketSize)
 
 	newRPC := network.CreateRPC("find_node_response", *network.Self, nil, closestNeigbourList)
 	return newRPC

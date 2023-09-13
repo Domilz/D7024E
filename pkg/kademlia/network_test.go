@@ -17,8 +17,9 @@ func TestNetwork(t *testing.T) {
 		},
 	}
 
+	addContact := NewContact(NewKademliaID("1111111300000000000000000000000000000000"), "localhost:8003")
 	kademlia1.Network.RoutingTable.AddContact(NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "localhost:8002"))
-	kademlia1.Network.RoutingTable.AddContact(NewContact(NewKademliaID("1111111300000000000000000000000000000000"), "localhost:8003"))
+	kademlia1.Network.RoutingTable.AddContact(addContact)
 	kademlia1.Network.RoutingTable.AddContact(NewContact(NewKademliaID("1111111400000000000000000000000000000000"), "localhost:8004"))
 
 	kademlia2 := Kademlia{
@@ -37,7 +38,7 @@ func TestNetwork(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	target := NewContact(NewKademliaID("2111111400000000000000000000000000000000"), "localhost:8005")
 
-	network2.SendFindContactMessage(&target)
+	network2.SendFindContactMessage(&addContact, target.ID)
 
 	time.Sleep(5 * time.Second)
 
