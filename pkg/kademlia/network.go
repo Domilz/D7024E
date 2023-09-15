@@ -36,11 +36,8 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 		go kademliaNode.Network.WriteResponse(response, rAddr, conn)
 
-<<<<<<< Updated upstream
 		// fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
-=======
 		//fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
->>>>>>> Stashed changes
 	}
 
 }
@@ -67,11 +64,8 @@ func (network *Network) sendMessage(address string, msg []byte) ([]byte, error) 
 		return nil, fmt.Errorf("error sending UDP message: %w", err)
 	}
 
-<<<<<<< Updated upstream
 	// fmt.Println("Message sent to UDP server:", string(msg))
-=======
 	//fmt.Println("Message sent to UDP server:", string(msg))
->>>>>>> Stashed changes
 
 	timeout := 4 * time.Second
 
@@ -137,14 +131,9 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 	}
 }
 
-<<<<<<< Updated upstream
-func (network *Network) SendFindContactMessage(contact *Contact, target *KademliaID) []Contact {
-	rpc := network.CreateRPC("find_node", *network.Self, target, nil)
-=======
 func (network *Network) SendFindContactMessage(contact *Contact, targetID *KademliaID) []Contact {
 
 	rpc := network.CreateRPC("find_node", *network.Self, targetID, nil, "")
->>>>>>> Stashed changes
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -152,11 +141,9 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 	}
 
 	response, err := network.sendMessage(contact.Address, message)
-<<<<<<< Updated upstream
 	// fmt.Println("Message sent to UDP server:", contact.Address, "With message:", string(message))
-=======
+	response, err := network.sendMessage(contact.Address, message)
 	//fmt.Println("Message sent to UDP server:", string(message))
->>>>>>> Stashed changes
 
 	if err != nil {
 		fmt.Println("error: Node response timed out", err)
@@ -166,12 +153,9 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}
-<<<<<<< Updated upstream
+		network.updateRoutingTable(responseRPC)
 		// fmt.Println("Response: ", responseRPC)
 		network.findNodeResponse(responseRPC)
-=======
-		network.updateRoutingTable(responseRPC)
->>>>>>> Stashed changes
 		return responseRPC.ContactList
 	}
 	return nil
