@@ -71,7 +71,10 @@ func NewKademlia() *Kademlia {
 }
 
 func (kademlia *Kademlia) JoinNetwork() {
-	kademlia.LookupContact(*kademlia.Network.Self)
+	contacts := kademlia.LookupContact(*kademlia.Network.Self)
+	for _, contact := range contacts {
+		kademlia.Network.RoutingTable.AddContact(contact)
+	}
 }
 
 func (kademlia Kademlia) LookupContact(target Contact) []Contact {
