@@ -36,7 +36,11 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 		go kademliaNode.Network.WriteResponse(response, rAddr, conn)
 
+<<<<<<< Updated upstream
 		// fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
+=======
+		//fmt.Printf("Received %d bytes from %s: %s\n", n, rAddr, string(buffer[:n]))
+>>>>>>> Stashed changes
 	}
 
 }
@@ -63,7 +67,11 @@ func (network *Network) sendMessage(address string, msg []byte) ([]byte, error) 
 		return nil, fmt.Errorf("error sending UDP message: %w", err)
 	}
 
+<<<<<<< Updated upstream
 	// fmt.Println("Message sent to UDP server:", string(msg))
+=======
+	//fmt.Println("Message sent to UDP server:", string(msg))
+>>>>>>> Stashed changes
 
 	timeout := 4 * time.Second
 
@@ -85,11 +93,13 @@ func (network *Network) handleMessages(content []byte) RPC {
 
 	switch rpc.Topic {
 	case "ping":
-		return network.CreateRPC("pong", *network.Self, nil, nil)
+		return network.CreateRPC("pong", *network.Self, nil, nil, "")
 	case "find_node":
 		return network.findNode(rpc)
-	// case "store_value":
-	// return network.storeValue(rpc)
+	case "store_value":
+		return network.CreateRPC("Value added", *network.Self, nil, nil, "")
+	case "find_value":
+		return network.findValue(rpc)
 	default:
 		return RPC{}
 	}
@@ -109,7 +119,7 @@ func (network *Network) WriteResponse(response RPC, rAddr *net.UDPAddr, conn *ne
 func (network *Network) SendPingMessage(contact *Contact) bool {
 	fmt.Println("Sending ping to address,", contact.Address)
 
-	rpc := network.CreateRPC("ping", *contact, nil, nil)
+	rpc := network.CreateRPC("ping", *contact, nil, nil, "")
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -127,8 +137,14 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 	}
 }
 
+<<<<<<< Updated upstream
 func (network *Network) SendFindContactMessage(contact *Contact, target *KademliaID) []Contact {
 	rpc := network.CreateRPC("find_node", *network.Self, target, nil)
+=======
+func (network *Network) SendFindContactMessage(contact *Contact, targetID *KademliaID) []Contact {
+
+	rpc := network.CreateRPC("find_node", *network.Self, targetID, nil, "")
+>>>>>>> Stashed changes
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -136,7 +152,11 @@ func (network *Network) SendFindContactMessage(contact *Contact, target *Kademli
 	}
 
 	response, err := network.sendMessage(contact.Address, message)
+<<<<<<< Updated upstream
 	// fmt.Println("Message sent to UDP server:", contact.Address, "With message:", string(message))
+=======
+	//fmt.Println("Message sent to UDP server:", string(message))
+>>>>>>> Stashed changes
 
 	if err != nil {
 		fmt.Println("error: Node response timed out", err)
@@ -146,19 +166,68 @@ func (network *Network) SendFindContactMessage(contact *Contact, target *Kademli
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}
+<<<<<<< Updated upstream
 		// fmt.Println("Response: ", responseRPC)
 		network.findNodeResponse(responseRPC)
+=======
+		network.updateRoutingTable(responseRPC)
+>>>>>>> Stashed changes
 		return responseRPC.ContactList
 	}
 	return nil
 }
 
-func (network *Network) SendFindDataMessage(hash string) {
-	// TODO
+func (network *Network) SendFindDataMessage(contact Contact, hash string) ([]Contact, string) {
+	key := NewKademliaID(hash)
+	rpc := network.CreateRPC("find_data", *network.Self, key, nil, hash)
+
+	message, err := json.Marshal(rpc)
+	if err != nil {
+		fmt.Println("Json error", err)
+	}
+
+	response, err := network.sendMessage(contact.Address, message)
+	//fmt.Println("Message sent to UDP server:", string(message))
+
+	if err != nil {
+		fmt.Println("error: Node response timed out", err)
+	} else {
+		var responseRPC RPC
+		err := json.Unmarshal(response, &responseRPC)
+		if err != nil {
+			fmt.Println("error unmarshal of node response:", err)
+		}
+		network.updateRoutingTable(responseRPC)
+		return responseRPC.ContactList, ""
+	}
+	return nil, ""
 }
 
-func (network *Network) SendStoreMessage(data []byte) {
-	// hashedData := NewKademliaID(string(data))
+func (network *Network) SendStoreMessage(contact Contact, data []byte) bool {
+	rpc := network.CreateRPC("find_data", *network.Self, nil, nil, string(data))
+
+	message, err := json.Marshal(rpc)
+	if err != nil {
+		fmt.Println("Json error", err)
+	}
+
+	response, err := network.sendMessage(contact.Address, message)
+	//fmt.Println("Message sent to UDP server:", string(message))
+
+	if err != nil {
+		fmt.Println("Store failed:", err)
+		return false
+
+	} else {
+		fmt.Println("Recieved store:", response)
+		return true
+	}
+
+}
+
+func (network *Network) AddValueToDic(value string) {
+	key := *NewKademliaID(value)
+	network.Objects[key] = value
 }
 
 func GetLocalIP() string {

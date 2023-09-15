@@ -11,6 +11,7 @@ type Contact struct {
 	ID       *KademliaID
 	Address  string
 	distance *KademliaID
+	Objects  map[KademliaID]string
 }
 
 // NewContact returns a new instance of a Contact
