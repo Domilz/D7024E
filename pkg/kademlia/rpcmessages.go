@@ -32,7 +32,15 @@ func (network *Network) findNode(rpc RPC) RPC {
 }
 
 func (network *Network) findValue(rpc RPC) RPC {
-	network.RoutingTable.FindClosestContacts(rpc.TargetID, bucketSize)
+	contactList := network.RoutingTable.FindClosestContacts(rpc.TargetID, bucketSize)
+	stringTarget := rpc.TargetID.String()
+	for _, contact := range contactList {
+		val, ok := contact.Objects[stringTarget]
+		if ok {
+			return network.CreateRPC("find_value_response", contact, rpc.TargetID, nil, val)
+		}
+	}
+	return network.CreateRPC("find_value_response", *network.Self, rpc.TargetID, contactList, "")
 }
 
 func (network *Network) updateRoutingTable(rpc RPC) {

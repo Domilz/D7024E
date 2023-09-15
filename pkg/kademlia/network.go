@@ -142,8 +142,6 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 
 	response, err := network.sendMessage(contact.Address, message)
 	// fmt.Println("Message sent to UDP server:", contact.Address, "With message:", string(message))
-	response, err := network.sendMessage(contact.Address, message)
-	//fmt.Println("Message sent to UDP server:", string(message))
 
 	if err != nil {
 		fmt.Println("error: Node response timed out", err)
@@ -154,8 +152,7 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 			fmt.Println("error unmarshal of node response:", err)
 		}
 		network.updateRoutingTable(responseRPC)
-		// fmt.Println("Response: ", responseRPC)
-		network.findNodeResponse(responseRPC)
+
 		return responseRPC.ContactList
 	}
 	return nil
@@ -181,8 +178,14 @@ func (network *Network) SendFindDataMessage(contact Contact, hash string) ([]Con
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}
-		network.updateRoutingTable(responseRPC)
-		return responseRPC.ContactList, ""
+
+		if responseRPC.ContactList == nil {
+			return nil, responseRPC.Value
+		} else {
+			network.updateRoutingTable(responseRPC)
+			return responseRPC.ContactList, ""
+		}
+
 	}
 	return nil, ""
 }
@@ -211,7 +214,7 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) bool {
 
 func (network *Network) AddValueToDic(value string) {
 	key := *NewKademliaID(value)
-	network.Objects[key] = value
+	network.Self.Objects[key.String()] = value
 }
 
 func GetLocalIP() string {

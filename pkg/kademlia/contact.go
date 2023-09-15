@@ -11,12 +11,12 @@ type Contact struct {
 	ID       *KademliaID
 	Address  string
 	distance *KademliaID
-	Objects  map[KademliaID]string
+	Objects  map[string]string
 }
 
 // NewContact returns a new instance of a Contact
 func NewContact(id *KademliaID, address string) Contact {
-	return Contact{id, address, nil}
+	return Contact{id, address, nil, make(map[string]string)}
 }
 
 // CalcDistance calculates the distance to the target and
