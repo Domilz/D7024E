@@ -25,6 +25,8 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 	defer conn.Close()
 
+	kademliaNode.JoinNetwork()
+
 	for {
 		buffer := make([]byte, 1024)
 		n, rAddr, err := conn.ReadFromUDP(buffer)
