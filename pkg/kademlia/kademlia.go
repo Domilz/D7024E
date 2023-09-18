@@ -188,8 +188,74 @@ func Find(list *[]Nodes, contact Contact) bool {
 	return false
 }
 
-func (kademlia *Kademlia) LookupData(hash string) {
-	// TODO
+func (kademlia *Kademlia) LookupData(hash string) string {
+	target := NewKademliaID(hash)
+	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target, K)
+	var closestContacts []Nodes
+	for i, node := range closeToTarget {
+		fmt.Println("Node:", node)
+		newNode := Nodes{contact: &closeToTarget[i], visited: false}
+		closestContacts = append(closestContacts, newNode)
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	kademlia.getClosestFromLookupData(ctx, cancel, &closestContacts, hash)
+
+	fmt.Println("")
+	for _, ele := range closestContacts {
+		fmt.Println(ele.contact, ele.visited)
+	}
+
+	return ""
+}
+
+func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel context.CancelFunc, closestContacts *[]Nodes, target string) []Nodes {
+	responseChannel := make(chan []Contact)
+	doneCh := make(chan string)
+	go kademlia.sendFindData(responseChannel, doneCh, closestContacts, target, Alpha)
+
+	newSends := 0
+	for {
+		select {
+		case contactList := <-responseChannel:
+			writeLock.Lock()
+			newElement := kademlia.UpdateContacts(closestContacts, contactList, target)
+			writeLock.Unlock()
+			if newElement {
+				newSends++
+				go kademlia.getClosestFromLookup(ctx, cancel, closestContacts, target)
+			}
+		case <-doneCh:
+			if newSends == 0 {
+				writeLock.Lock()
+				kademlia.finalLookup(closestContacts, target)
+				writeLock.Unlock()
+				cancel()
+			}
+
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh chan string, closestContacts *[]Nodes, target string, times int) {
+	i := 0
+	j := 0
+	for i < times && j < len(*closestContacts) {
+		if !(*closestContacts)[j].visited {
+			(*closestContacts)[j].visited = true
+			contactList, value := kademlia.Network.SendFindDataMessage((*closestContacts)[j].contact, target)
+			if contactList == nil {
+				doneCh <- true
+			}
+			responseChannel <- contactList
+			i++
+		}
+		j++
+	}
+	doneCh <- true
 }
 
 func (kademlia *Kademlia) Store(data []byte) {

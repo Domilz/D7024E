@@ -19,8 +19,8 @@ func (network *Network) CreateRPC(topic string, contact Contact, targetID *Kadem
 }
 
 func (network *Network) StoreValue(rpc RPC) RPC {
-	network.AddValueToDic(rpc.Value)
-	newRPC := network.CreateRPC("store_response", *network.Self, nil, nil, "")
+	key := network.AddValueToDic(rpc.Value)
+	newRPC := network.CreateRPC("store_response", *network.Self, key, nil, "")
 	return newRPC
 }
 
@@ -32,15 +32,16 @@ func (network *Network) findNode(rpc RPC) RPC {
 }
 
 func (network *Network) findValue(rpc RPC) RPC {
-	contactList := network.RoutingTable.FindClosestContacts(rpc.TargetID, bucketSize)
-	stringTarget := rpc.TargetID.String()
+	key := NewKademliaID(rpc.Value)
+	contactList := network.RoutingTable.FindClosestContacts(key, bucketSize)
+	stringTarget := key.String()
 	for _, contact := range contactList {
 		val, ok := contact.Objects[stringTarget]
 		if ok {
-			return network.CreateRPC("find_value_response", contact, rpc.TargetID, nil, val)
+			return network.CreateRPC("find_value_response", contact, nil, nil, val)
 		}
 	}
-	return network.CreateRPC("find_value_response", *network.Self, rpc.TargetID, contactList, "")
+	return network.CreateRPC("find_value_response", *network.Self, nil, contactList, rpc.Value)
 }
 
 func (network *Network) updateRoutingTable(rpc RPC) {

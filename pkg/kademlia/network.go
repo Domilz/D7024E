@@ -93,7 +93,7 @@ func (network *Network) handleMessages(content []byte) RPC {
 	case "find_node":
 		return network.findNode(rpc)
 	case "store_value":
-		return network.CreateRPC("Value added", *network.Self, nil, nil, "")
+		return network.StoreValue(rpc)
 	case "find_value":
 		return network.findValue(rpc)
 	default:
@@ -160,9 +160,8 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 	return nil
 }
 
-func (network *Network) SendFindDataMessage(contact Contact, hash string) ([]Contact, string) {
-	key := NewKademliaID(hash)
-	rpc := network.CreateRPC("find_data", *network.Self, key, nil, hash)
+func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Contact, string) {
+	rpc := network.CreateRPC("find_data", *network.Self, nil, nil, hash)
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -192,8 +191,8 @@ func (network *Network) SendFindDataMessage(contact Contact, hash string) ([]Con
 	return nil, ""
 }
 
-func (network *Network) SendStoreMessage(contact Contact, data []byte) bool {
-	rpc := network.CreateRPC("find_data", *network.Self, nil, nil, string(data))
+func (network *Network) SendStoreMessage(contact Contact, data []byte) string {
+	rpc := network.CreateRPC("store_data", *network.Self, nil, nil, string(data))
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -205,18 +204,24 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) bool {
 
 	if err != nil {
 		fmt.Println("Store failed:", err)
-		return false
+		return ""
 
 	} else {
-		fmt.Println("Recieved store:", response)
-		return true
+		var responseRPC RPC
+		err := json.Unmarshal(response, &responseRPC)
+		if err != nil {
+			fmt.Println("error unmarshal of node response:", err)
+		}
+
+		return responseRPC.TargetID.String()
 	}
 
 }
 
-func (network *Network) AddValueToDic(value string) {
-	key := *NewKademliaID(value)
+func (network *Network) AddValueToDic(value string) *KademliaID {
+	key := NewKademliaID(value)
 	network.Self.Objects[key.String()] = value
+	return key
 }
 
 func GetLocalIP() string {
