@@ -71,17 +71,13 @@ func NewKademlia() *Kademlia {
 }
 
 func (kademlia *Kademlia) JoinNetwork() {
-	contacts := kademlia.LookupContact(*kademlia.Network.Self)
-	for _, contact := range contacts {
-		kademlia.Network.RoutingTable.AddContact(contact)
-	}
+	_ = kademlia.LookupContact(*kademlia.Network.Self)
 }
 
 func (kademlia Kademlia) LookupContact(target Contact) []Contact {
 	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target.ID, K)
 	var closestContacts []Nodes
-	for i, node := range closeToTarget {
-		fmt.Println("Node:", node)
+	for i, _ := range closeToTarget {
 		newNode := Nodes{contact: &closeToTarget[i], visited: false}
 		closestContacts = append(closestContacts, newNode)
 	}
@@ -90,7 +86,6 @@ func (kademlia Kademlia) LookupContact(target Contact) []Contact {
 	ctx, cancel := context.WithCancel(ctx)
 	kademlia.getClosestFromLookup(ctx, cancel, &closestContacts, target)
 
-	fmt.Println("")
 	var returnList []Contact
 	for _, ele := range closestContacts {
 		returnList = append(returnList, *ele.contact)
