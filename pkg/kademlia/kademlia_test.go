@@ -52,10 +52,8 @@ func TestLookup(t *testing.T) {
 	}
 
 	kademlia1.Network.RoutingTable.AddContact(contact2)
-	kademlia1.Network.RoutingTable.AddContact(contact3)
-	kademlia1.Network.RoutingTable.AddContact(contact4)
-	kademlia2.Network.RoutingTable.AddContact(contact4)
-	kademlia3.Network.RoutingTable.AddContact(contact5)
+	kademlia2.Network.RoutingTable.AddContact(contact3)
+	kademlia3.Network.RoutingTable.AddContact(contact4)
 	kademlia4.Network.RoutingTable.AddContact(contact5)
 
 	go Listen("localhost", "8000", &kademlia1)

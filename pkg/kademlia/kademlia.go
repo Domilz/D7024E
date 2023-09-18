@@ -1,7 +1,6 @@
 package kademlia
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -82,9 +81,14 @@ func (kademlia Kademlia) LookupContact(target Contact) []Contact {
 		closestContacts = append(closestContacts, newNode)
 	}
 
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	kademlia.getClosestFromLookup(ctx, cancel, &closestContacts, target)
+	// ctx := context.Background()
+	// ctx, cancel := context.WithCancel(ctx)
+	mainCh := make(chan bool)
+	kademlia.getClosestFromLookup(mainCh, &closestContacts, target)
+
+	// writeLock.Lock()
+	// kademlia.finalLookup(&closestContacts, target)
+	// writeLock.Unlock()
 
 	var returnList []Contact
 	for _, ele := range closestContacts {
@@ -94,12 +98,13 @@ func (kademlia Kademlia) LookupContact(target Contact) []Contact {
 	return returnList
 }
 
-func (kademlia Kademlia) getClosestFromLookup(ctx context.Context, cancel context.CancelFunc, closestContacts *[]Nodes, target Contact) []Nodes {
+func (kademlia Kademlia) getClosestFromLookup(finishedCh chan bool, closestContacts *[]Nodes, target Contact) {
 	responseChannel := make(chan []Contact)
 	doneCh := make(chan bool)
+	roundsCh := make(chan bool)
 	go kademlia.sendFindNode(responseChannel, doneCh, closestContacts, target, Alpha)
 
-	haveUpdated := false
+	newRounds := 0
 	for {
 		select {
 		case contactList := <-responseChannel:
@@ -107,20 +112,17 @@ func (kademlia Kademlia) getClosestFromLookup(ctx context.Context, cancel contex
 			newElement := kademlia.UpdateContacts(closestContacts, contactList, target)
 			writeLock.Unlock()
 			if newElement {
-				haveUpdated = true
-				go kademlia.getClosestFromLookup(ctx, cancel, closestContacts, target)
+				newRounds++
+				go kademlia.getClosestFromLookup(roundsCh, closestContacts, target)
 			}
 		case <-doneCh:
-			if haveUpdated {
-				cancel()
-				time.Sleep(500 * time.Millisecond)
-				writeLock.Lock()
-				kademlia.finalLookup(closestContacts, target)
-				writeLock.Unlock()
+			for i := 0; i < newRounds; i++ {
+				<-roundsCh
 			}
-
-		case <-ctx.Done():
-			return nil
+			finishedCh <- true
+			return
+			// case <-ctx.Done():
+			// 	return nil
 		}
 	}
 }
@@ -151,6 +153,7 @@ func (kademlia Kademlia) sendFindNode(responseChannel chan []Contact, doneCh cha
 		}
 		j++
 	}
+	time.Sleep(3 * time.Second)
 	doneCh <- true
 }
 
@@ -188,75 +191,75 @@ func Find(list *[]Nodes, contact Contact) bool {
 	return false
 }
 
-func (kademlia *Kademlia) LookupData(hash string) string {
-	target := NewKademliaID(hash)
-	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target, K)
-	var closestContacts []Nodes
-	for i, node := range closeToTarget {
-		fmt.Println("Node:", node)
-		newNode := Nodes{contact: &closeToTarget[i], visited: false}
-		closestContacts = append(closestContacts, newNode)
-	}
+// func (kademlia *Kademlia) LookupData(hash string) string {
+// 	target := NewKademliaID(hash)
+// 	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target, K)
+// 	var closestContacts []Nodes
+// 	for i, node := range closeToTarget {
+// 		fmt.Println("Node:", node)
+// 		newNode := Nodes{contact: &closeToTarget[i], visited: false}
+// 		closestContacts = append(closestContacts, newNode)
+// 	}
 
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	kademlia.getClosestFromLookupData(ctx, cancel, &closestContacts, hash)
+// 	ctx := context.Background()
+// 	ctx, cancel := context.WithCancel(ctx)
+// 	kademlia.getClosestFromLookupData(ctx, cancel, &closestContacts, hash)
 
-	fmt.Println("")
-	for _, ele := range closestContacts {
-		fmt.Println(ele.contact, ele.visited)
-	}
+// 	fmt.Println("")
+// 	for _, ele := range closestContacts {
+// 		fmt.Println(ele.contact, ele.visited)
+// 	}
 
-	return ""
-}
+// 	return ""
+// }
 
-func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel context.CancelFunc, closestContacts *[]Nodes, target string) []Nodes {
-	responseChannel := make(chan []Contact)
-	doneCh := make(chan string)
-	go kademlia.sendFindData(responseChannel, doneCh, closestContacts, target, Alpha)
+// func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel context.CancelFunc, closestContacts *[]Nodes, target string) []Nodes {
+// 	responseChannel := make(chan []Contact)
+// 	doneCh := make(chan string)
+// 	go kademlia.sendFindData(responseChannel, doneCh, closestContacts, target, Alpha)
 
-	newSends := 0
-	for {
-		select {
-		case contactList := <-responseChannel:
-			writeLock.Lock()
-			newElement := kademlia.UpdateContacts(closestContacts, contactList, target)
-			writeLock.Unlock()
-			if newElement {
-				newSends++
-				go kademlia.getClosestFromLookup(ctx, cancel, closestContacts, target)
-			}
-		case <-doneCh:
-			if newSends == 0 {
-				writeLock.Lock()
-				kademlia.finalLookup(closestContacts, target)
-				writeLock.Unlock()
-				cancel()
-			}
+// 	newSends := 0
+// 	for {
+// 		select {
+// 		case contactList := <-responseChannel:
+// 			writeLock.Lock()
+// 			newElement := kademlia.UpdateContacts(closestContacts, contactList, target)
+// 			writeLock.Unlock()
+// 			if newElement {
+// 				newSends++
+// 				go kademlia.getClosestFromLookup(ctx, cancel, closestContacts, target)
+// 			}
+// 		case <-doneCh:
+// 			if newSends == 0 {
+// 				writeLock.Lock()
+// 				kademlia.finalLookup(closestContacts, target)
+// 				writeLock.Unlock()
+// 				cancel()
+// 			}
 
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
+// 		case <-ctx.Done():
+// 			return nil
+// 		}
+// 	}
+// }
 
-func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh chan string, closestContacts *[]Nodes, target string, times int) {
-	i := 0
-	j := 0
-	for i < times && j < len(*closestContacts) {
-		if !(*closestContacts)[j].visited {
-			(*closestContacts)[j].visited = true
-			contactList, value := kademlia.Network.SendFindDataMessage((*closestContacts)[j].contact, target)
-			if contactList == nil {
-				doneCh <- true
-			}
-			responseChannel <- contactList
-			i++
-		}
-		j++
-	}
-	doneCh <- true
-}
+// func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh chan string, closestContacts *[]Nodes, target string, times int) {
+// 	i := 0
+// 	j := 0
+// 	for i < times && j < len(*closestContacts) {
+// 		if !(*closestContacts)[j].visited {
+// 			(*closestContacts)[j].visited = true
+// 			contactList, value := kademlia.Network.SendFindDataMessage((*closestContacts)[j].contact, target)
+// 			if contactList == nil {
+// 				doneCh <- true
+// 			}
+// 			responseChannel <- contactList
+// 			i++
+// 		}
+// 		j++
+// 	}
+// 	doneCh <- true
+// }
 
 func (kademlia *Kademlia) Store(data []byte) {
 	// TODO
