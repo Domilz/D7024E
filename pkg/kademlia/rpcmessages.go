@@ -31,7 +31,7 @@ func (network *Network) findNode(rpc RPC) RPC {
 	return newRPC
 }
 
-func (network *Network) findValue(rpc RPC) RPC {
+func (network *Network) FindValue(rpc RPC) RPC {
 	key := NewKademliaID(rpc.Value)
 	contactList := network.RoutingTable.FindClosestContacts(key, bucketSize)
 	stringTarget := key.String()
