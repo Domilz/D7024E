@@ -21,7 +21,7 @@ type Nodes struct {
 const (
 	DefaultBootstrapInput = "FFFFFFFF00000000000000000000000000000000"
 	Alpha                 = 3
-	K                     = 20
+	K                     = 3
 )
 
 var (
@@ -65,6 +65,7 @@ func NewKademlia() *Kademlia {
 		Network: &Network{
 			Self:         &contact,
 			RoutingTable: routingTable,
+			Objects:      make(map[KademliaID]string),
 		},
 	}
 }
@@ -116,6 +117,7 @@ func (kademlia Kademlia) getClosestFromLookup(finishedCh chan bool, closestConta
 		case <-doneCh:
 			for i := 0; i < newRounds; i++ {
 				<-roundsCh
+
 			}
 			finishedCh <- true
 			return
@@ -256,6 +258,8 @@ func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh cha
 	}
 	doneCh <- "not found"
 }
+
+
 
 func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
 	key := NewKademliaID(string(data))

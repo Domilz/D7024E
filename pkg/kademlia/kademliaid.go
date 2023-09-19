@@ -2,6 +2,7 @@ package kademlia
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/rand"
 )
 
@@ -14,6 +15,7 @@ type KademliaID [IDLength]byte
 // NewKademliaID returns a new instance of a KademliaID based on the string input
 func NewKademliaID(data string) *KademliaID {
 	decoded, _ := hex.DecodeString(data)
+	fmt.Println(data, len(decoded))
 
 	newKademliaID := KademliaID{}
 	for i := 0; i < IDLength; i++ {

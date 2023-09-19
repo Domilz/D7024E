@@ -25,22 +25,25 @@ func (network *Network) StoreValue(rpc RPC) RPC {
 }
 
 func (network *Network) findNode(rpc RPC) RPC {
-	closestNeigbourList := network.RoutingTable.FindClosestContacts(rpc.TargetID, bucketSize)
+	closestNeigbourList := network.RoutingTable.FindClosestContacts(rpc.TargetID, K)
 
 	newRPC := network.CreateRPC("find_node_response", *network.Self, nil, closestNeigbourList, "")
 	return newRPC
 }
 
+
 func (network *Network) FindValue(rpc RPC) RPC {
-	key := NewKademliaID(rpc.Value)
-	contactList := network.RoutingTable.FindClosestContacts(key, bucketSize)
-	stringTarget := key.String()
-	for _, contact := range contactList {
-		val, ok := contact.Objects[stringTarget]
-		if ok {
-			return network.CreateRPC("find_value_response", contact, nil, nil, val)
-		}
+	byteRep := []byte(rpc.Value)
+	var key *KademliaID
+	for i := 0; i < IDLength; i++ {
+		(*key)[i] = byteRep[i]
 	}
+	val, ok := network.Objects[*rpc.TargetID]
+	if ok {
+		return network.CreateRPC("find_value_response", *network.Self, rpc.TargetID, nil, val)
+	}
+	contactList := network.RoutingTable.FindClosestContacts(key, K)
+
 	return network.CreateRPC("find_value_response", *network.Self, nil, contactList, rpc.Value)
 }
 
