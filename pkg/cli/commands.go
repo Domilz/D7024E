@@ -8,7 +8,12 @@ import (
 
 func get(args []string, kademlia *kademlia.Kademlia) {
 	if len(args) == 1 {
-		kademlia.LookupData(args[0])
+		data, err := kademlia.LookupData(args[0])
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Printf("Contact %v had the content: %v", data.Contact.ID, data.Value)
+		}
 	} else {
 		fmt.Println("Bad argument")
 	}

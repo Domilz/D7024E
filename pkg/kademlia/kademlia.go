@@ -18,6 +18,11 @@ type Nodes struct {
 	visited bool
 }
 
+type NodeWithValue struct {
+	Contact *Contact
+	Value   string
+}
+
 const (
 	DefaultBootstrapInput = "FFFFFFFF00000000000000000000000000000000"
 	Alpha                 = 3
@@ -126,8 +131,6 @@ func (kademlia Kademlia) getClosestFromLookup(finishedCh chan bool, closestConta
 }
 
 func (kademlia Kademlia) finalLookup(closestContacts *[]Nodes, target Contact) {
-	// contact := NewContact(NewKademliaID("1111111600000000000000000000000000000000"), "localhost:8005")
-	// *closestContacts = append(*closestContacts, Nodes{contact: &contact, visited: false})
 	i := 0
 	for i < len(*closestContacts) {
 		if !(*closestContacts)[i].visited {
@@ -188,7 +191,7 @@ func Find(list *[]Nodes, contact Contact) bool {
 	return false
 }
 
-func (kademlia *Kademlia) LookupData(hash string) string {
+func (kademlia *Kademlia) LookupData(hash string) (NodeWithValue, error) {
 	byteRepresentation := []byte(hash)
 	var target KademliaID
 	for i := 0; i < IDLength; i++ {
@@ -203,21 +206,28 @@ func (kademlia *Kademlia) LookupData(hash string) string {
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	kademlia.getClosestFromLookupData(ctx, cancel, &closestContacts, &target, hash)
+	valueCh := make(chan NodeWithValue)
+	mainCh := make(chan bool)
 
-	for _, ele := range closestContacts {
-		fmt.Println(ele.contact, ele.visited)
+	go kademlia.getClosestFromLookupData(ctx, cancel, mainCh, valueCh, &closestContacts, &target, hash)
+
+	select {
+	case value := <-valueCh:
+		cancel()
+		return value, nil
+	case <-mainCh:
+		return NodeWithValue{}, fmt.Errorf("could not find data")
 	}
-
-	return ""
 }
 
-func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel context.CancelFunc, closestContacts *[]Nodes, target *KademliaID, data string) string {
+func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel context.CancelFunc, finishedCh chan bool, valueCh chan NodeWithValue,
+	closestContacts *[]Nodes, target *KademliaID, data string) {
 	responseChannel := make(chan []Contact)
-	doneCh := make(chan string)
-	go kademlia.sendFindData(responseChannel, doneCh, closestContacts, data, Alpha)
+	roundsCh := make(chan bool)
+	doneCh := make(chan bool)
+	go kademlia.sendFindData(responseChannel, doneCh, valueCh, closestContacts, data, Alpha)
 
-	newSends := 0
+	newRounds := 0
 	for {
 		select {
 		case contactList := <-responseChannel:
@@ -225,23 +235,23 @@ func (kademlia Kademlia) getClosestFromLookupData(ctx context.Context, cancel co
 			newElement := kademlia.UpdateContacts(closestContacts, contactList, target)
 			writeLock.Unlock()
 			if newElement {
-				newSends++
-				go kademlia.getClosestFromLookupData(ctx, cancel, closestContacts, target, data)
+				newRounds++
+				go kademlia.getClosestFromLookupData(ctx, cancel, roundsCh, valueCh, closestContacts, target, data)
 			}
-		case val := <-doneCh:
-			if val != "not found" {
-				cancel()
-				return val
+		case <-doneCh:
+			for i := 0; i < newRounds; i++ {
+				<-roundsCh
 			}
-			return "not here"
+			finishedCh <- true
+			return
 
 		case <-ctx.Done():
-			return "found"
+			return
 		}
 	}
 }
 
-func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh chan string, closestContacts *[]Nodes, data string, times int) {
+func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh chan bool, valueCh chan NodeWithValue, closestContacts *[]Nodes, data string, times int) {
 	i := 0
 	j := 0
 	for i < times && j < len(*closestContacts) {
@@ -249,17 +259,18 @@ func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh cha
 			(*closestContacts)[j].visited = true
 			contactList, value := kademlia.Network.SendFindDataMessage((*closestContacts)[j].contact, data)
 			if contactList == nil {
-				doneCh <- value
+				valueCh <- NodeWithValue{
+					Contact: (*closestContacts)[j].contact,
+					Value:   value,
+				}
 			}
 			responseChannel <- contactList
 			i++
 		}
 		j++
 	}
-	doneCh <- "not found"
+	doneCh <- true
 }
-
-
 
 func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
 	key := NewKademliaID(string(data))
