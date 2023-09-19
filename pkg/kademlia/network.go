@@ -98,7 +98,7 @@ func (network *Network) handleMessages(content []byte) RPC {
 		return network.findNode(rpc)
 	case "store_value":
 		return network.StoreValue(rpc)
-	case "find_value":
+	case "find_data":
 		return network.FindValue(rpc)
 	default:
 		return RPC{}
