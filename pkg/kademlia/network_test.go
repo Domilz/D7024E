@@ -86,7 +86,7 @@ func TestStore(t *testing.T) {
 	go Listen("localhost", "8001", &kademlia2)
 	time.Sleep(1 * time.Second)
 
-	hash := network1.SendStoreMessage(contact2, []byte("hehe"))
+	hash, _ := network1.SendStoreMessage(contact2, []byte("hehe"))
 	time.Sleep(1 * time.Second)
 	value := kademlia2.Network.Objects[*hash]
 	fmt.Println(value)
