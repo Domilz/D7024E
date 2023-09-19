@@ -31,7 +31,8 @@ func (network *Network) findNode(rpc RPC) RPC {
 	return newRPC
 }
 
-func (network *Network) findValue(rpc RPC) RPC {
+
+func (network *Network) FindValue(rpc RPC) RPC {
 	byteRep := []byte(rpc.Value)
 	var key *KademliaID
 	for i := 0; i < IDLength; i++ {

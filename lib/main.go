@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/Domilz/D7024E/pkg/cli"
 	"github.com/Domilz/D7024E/pkg/kademlia"
 )
 
@@ -14,5 +15,7 @@ func main() {
 
 	kademliaNode := kademlia.NewKademlia()
 
-	kademlia.Listen(localIP, "8080", kademliaNode)
+	go kademlia.Listen(localIP, "8080", kademliaNode)
+
+	cli.CLI(kademliaNode)
 }

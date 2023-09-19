@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,6 +68,7 @@ func TestLookup(t *testing.T) {
 	go Listen("localhost", "8002", &kademlia3)
 	go Listen("localhost", "8003", &kademlia4)
 	go Listen("localhost", "8004", &kademlia5)
+
 	time.Sleep(1 * time.Second)
 
 	contacts := kademlia1.LookupContact(contact1)

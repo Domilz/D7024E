@@ -27,6 +27,7 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 	defer conn.Close()
 
+
 	//kademliaNode.JoinNetwork()
 
 	for {
@@ -99,7 +100,7 @@ func (network *Network) handleMessages(content []byte) RPC {
 	case "store_value":
 		return network.StoreValue(rpc)
 	case "find_value":
-		return network.findValue(rpc)
+		return network.FindValue(rpc)
 	default:
 		return RPC{}
 	}
@@ -195,8 +196,9 @@ func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Co
 	return nil, ""
 }
 
-func (network *Network) SendStoreMessage(contact Contact, data []byte) *KademliaID {
+func (network *Network) SendStoreMessage(contact Contact, data []byte) (*KademliaID, error) {
 	rpc := network.CreateRPC("store_value", *network.Self, nil, nil, string(data))
+
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -207,8 +209,8 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) *Kademlia
 	//fmt.Println("Message sent to UDP server:", string(message))
 
 	if err != nil {
-		fmt.Println("Store failed:", err)
-		return nil
+		return "", fmt.Errorf("Store failed: %v", err)
+
 
 	} else {
 		var responseRPC RPC
@@ -217,7 +219,8 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) *Kademlia
 			fmt.Println("error unmarshal of node response:", err)
 		}
 
-		return responseRPC.TargetID
+		return responseRPC.TargetID.String(), nil
+
 	}
 
 }
