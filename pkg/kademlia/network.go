@@ -1,6 +1,7 @@
 package kademlia
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 type Network struct {
 	RoutingTable *RoutingTable
 	Self         *Contact
+	Objects      map[KademliaID]string
 }
 
 func Listen(ip string, port string, kademliaNode *Kademlia) error {
@@ -25,7 +27,7 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 	defer conn.Close()
 
-	kademliaNode.JoinNetwork()
+	//kademliaNode.JoinNetwork()
 
 	for {
 		buffer := make([]byte, 1024)
@@ -87,8 +89,10 @@ func (network *Network) handleMessages(content []byte) RPC {
 		fmt.Println("Unmarshal handleMessage error", err)
 	}
 
+	fmt.Println("Topic: ", rpc.Topic)
 	switch rpc.Topic {
 	case "ping":
+		fmt.Println("in ping")
 		return network.CreateRPC("pong", *network.Self, nil, nil, "")
 	case "find_node":
 		return network.findNode(rpc)
@@ -191,8 +195,8 @@ func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Co
 	return nil, ""
 }
 
-func (network *Network) SendStoreMessage(contact Contact, data []byte) string {
-	rpc := network.CreateRPC("store_data", *network.Self, nil, nil, string(data))
+func (network *Network) SendStoreMessage(contact Contact, data []byte) *KademliaID {
+	rpc := network.CreateRPC("store_value", *network.Self, nil, nil, string(data))
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -204,7 +208,7 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) string {
 
 	if err != nil {
 		fmt.Println("Store failed:", err)
-		return ""
+		return nil
 
 	} else {
 		var responseRPC RPC
@@ -213,15 +217,18 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) string {
 			fmt.Println("error unmarshal of node response:", err)
 		}
 
-		return responseRPC.TargetID.String()
+		return responseRPC.TargetID
 	}
 
 }
 
 func (network *Network) AddValueToDic(value string) *KademliaID {
-	key := NewKademliaID(value)
-	network.Self.Objects[key.String()] = value
-	return key
+	var key KademliaID
+	key = sha1.Sum([]byte(value))
+	fmt.Println("hello worlds")
+
+	network.Objects[key] = value
+	return &key
 }
 
 func GetLocalIP() string {

@@ -1,18 +1,19 @@
 package kademlia
 
 import (
-	"fmt"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLookup(t *testing.T) {
 
-	contact1 := NewContact(NewKademliaID("FFFFFFFF00000000000000000000000000000000"), "localhost:8000")
-	contact2 := NewContact(NewKademliaID("EFFFFFFF00000000000000000000000000000000"), "localhost:8001")
-	contact3 := NewContact(NewKademliaID("1111111200000000000000000000000000000000"), "localhost:8002")
-	contact4 := NewContact(NewKademliaID("1111111400000000000000000000000000000000"), "localhost:8003")
-	contact5 := NewContact(NewKademliaID("1111111500000000000000000000000000000000"), "localhost:8004")
-	contact6 := NewContact(NewKademliaID("1111111600000000000000000000000000000000"), "localhost:8005")
+	contact1 := NewContact(NewKademliaID("0000000000000000000000000000000000000001"), "localhost:8000")
+	contact2 := NewContact(NewKademliaID("0000000000000000000000000000000000000002"), "localhost:8001")
+	contact3 := NewContact(NewKademliaID("0000000000000000000000000000000000000003"), "localhost:8002")
+	contact4 := NewContact(NewKademliaID("E000000000000000000000000000000000000001"), "localhost:8003")
+	contact5 := NewContact(NewKademliaID("EE00000000000000000000000000000000000001"), "localhost:8004")
 
 	kademlia1 := Kademlia{
 		Network: &Network{
@@ -44,31 +45,36 @@ func TestLookup(t *testing.T) {
 			Self:         &contact5,
 		},
 	}
-	kademlia6 := Kademlia{
-		Network: &Network{
-			RoutingTable: NewRoutingTable(contact6),
-			Self:         &contact5,
-		},
-	}
 
 	kademlia1.Network.RoutingTable.AddContact(contact2)
-	kademlia1.Network.RoutingTable.AddContact(contact3)
-	kademlia1.Network.RoutingTable.AddContact(contact4)
-	kademlia2.Network.RoutingTable.AddContact(contact4)
-	kademlia3.Network.RoutingTable.AddContact(contact5)
+	kademlia2.Network.RoutingTable.AddContact(contact3)
+	kademlia3.Network.RoutingTable.AddContact(contact4)
 	kademlia4.Network.RoutingTable.AddContact(contact5)
+	kademlia3.Network.RoutingTable.AddContact(contact5)
+	kademlia4.Network.RoutingTable.AddContact(contact2)
+	kademlia3.Network.RoutingTable.AddContact(contact1)
+
+	contact1.CalcDistance(contact1.ID)
+	contact2.CalcDistance(contact1.ID)
+	contact3.CalcDistance(contact1.ID)
+	contact4.CalcDistance(contact1.ID)
+	contact5.CalcDistance(contact1.ID)
+
+	wantedList := []KademliaID{*contact1.ID, *contact3.ID, *contact2.ID}
 
 	go Listen("localhost", "8000", &kademlia1)
 	go Listen("localhost", "8001", &kademlia2)
 	go Listen("localhost", "8002", &kademlia3)
 	go Listen("localhost", "8003", &kademlia4)
 	go Listen("localhost", "8004", &kademlia5)
-	go Listen("localhost", "8005", &kademlia6)
+	time.Sleep(1 * time.Second)
 
-	contacts := kademlia1.LookupContact(contact5)
+	contacts := kademlia1.LookupContact(contact1)
+	var idList []KademliaID
+	for _, contact := range contacts {
+		idList = append(idList, *contact.ID)
+	}
 	// contacts := kademlia1.Network.SendFindContactMessage(&contact3, contact5.ID)
 
-	for _, c := range contacts {
-		fmt.Println("Det vi får ut", c)
-	}
+	assert.Equal(t, wantedList, idList)
 }
