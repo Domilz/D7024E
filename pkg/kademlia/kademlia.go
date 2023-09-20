@@ -2,6 +2,7 @@ package kademlia
 
 import (
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"net"
 	"os"
@@ -63,8 +64,6 @@ func NewKademlia() *Kademlia {
 		contact = NewContact(NewRandomKademliaID(), localIP[0].String()+":8080")
 		routingTable = NewRoutingTable(contact)
 		routingTable.AddContact(bootstrap_contact)
-		closestContacts := routingTable.FindClosestContacts(contact.ID, 1)
-		fmt.Println("closes contact: ", closestContacts)
 	}
 	return &Kademlia{
 		Network: &Network{
@@ -273,10 +272,12 @@ func (kademlia Kademlia) sendFindData(responseChannel chan []Contact, doneCh cha
 }
 
 func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
-	key := NewKademliaID(string(data))
-	c := NewContact(key, "")
+	var dataID KademliaID
+	dataID = sha1.Sum(data)
+	c := NewContact(&dataID, "")
 	contacts := kademlia.LookupContact(c)
 	successfully := false
+	fmt.Println(contacts)
 	for _, contact := range contacts {
 		_, err := kademlia.Network.SendStoreMessage(contact, data)
 		if err == nil {
@@ -285,7 +286,7 @@ func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
 	}
 
 	if successfully {
-		return *key, nil
+		return dataID, nil
 	}
-	return *key, fmt.Errorf("uploading failed")
+	return dataID, fmt.Errorf("uploading failed")
 }

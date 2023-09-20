@@ -27,8 +27,6 @@ func Listen(ip string, port string, kademliaNode *Kademlia) error {
 
 	defer conn.Close()
 
-	//kademliaNode.JoinNetwork()
-
 	for {
 		buffer := make([]byte, 1024)
 		n, rAddr, err := conn.ReadFromUDP(buffer)
@@ -225,7 +223,6 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) (*Kademli
 func (network *Network) AddValueToDic(value string) *KademliaID {
 	var key KademliaID
 	key = sha1.Sum([]byte(value))
-	fmt.Println("hello worlds")
 
 	network.Objects[key] = value
 	return &key
