@@ -90,7 +90,11 @@ func (network *Network) handleMessages(content []byte) RPC {
 	}
 
 	fmt.Println("Topic: ", rpc.Topic)
+	var cList []Contact
+	cList = append(cList, rpc.Contact)
+	network.updateRoutingTable(cList)
 	switch rpc.Topic {
+
 	case "ping":
 		fmt.Println("in ping")
 		return network.CreateRPC("pong", *network.Self, nil, nil, "")
@@ -119,7 +123,7 @@ func (network *Network) WriteResponse(response RPC, rAddr *net.UDPAddr, conn *ne
 func (network *Network) SendPingMessage(contact *Contact) bool {
 	fmt.Println("Sending ping to address,", contact.Address)
 
-	rpc := network.CreateRPC("ping", *contact, nil, nil, "")
+	rpc := network.CreateRPC("ping", *network.Self, nil, nil, "")
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -132,6 +136,7 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 		return false
 
 	} else {
+		network.updateRoutingTable([]Contact{*contact})
 		fmt.Println("Recieved pong:", response)
 		return true
 	}
@@ -157,7 +162,8 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}
-		network.updateRoutingTable(responseRPC)
+		network.updateRoutingTable([]Contact{rpc.Contact})
+		network.updateRoutingTable(responseRPC.ContactList)
 
 		return responseRPC.ContactList
 	}
@@ -165,7 +171,9 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 }
 
 func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Contact, string) {
-	rpc := network.CreateRPC("find_data", *network.Self, nil, nil, hash)
+	kadID := NewKademliaID(hash)
+	fmt.Println("kadID: ", kadID)
+	rpc := network.CreateRPC("find_data", *network.Self, kadID, nil, "")
 
 	message, err := json.Marshal(rpc)
 	if err != nil {
@@ -184,10 +192,11 @@ func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Co
 			fmt.Println("error unmarshal of node response:", err)
 		}
 
+		network.updateRoutingTable([]Contact{rpc.Contact})
 		if responseRPC.ContactList == nil {
 			return nil, responseRPC.Value
 		} else {
-			network.updateRoutingTable(responseRPC)
+			network.updateRoutingTable(responseRPC.ContactList)
 			return responseRPC.ContactList, ""
 		}
 
@@ -212,6 +221,8 @@ func (network *Network) SendStoreMessage(contact Contact, data []byte) (*Kademli
 	} else {
 		var responseRPC RPC
 		err := json.Unmarshal(response, &responseRPC)
+		network.updateRoutingTable([]Contact{responseRPC.Contact})
+
 		if err != nil {
 			fmt.Println("error unmarshal of node response:", err)
 		}

@@ -31,24 +31,19 @@ func (network *Network) findNode(rpc RPC) RPC {
 	return newRPC
 }
 
-
 func (network *Network) FindValue(rpc RPC) RPC {
-	byteRep := []byte(rpc.Value)
-	var key *KademliaID
-	for i := 0; i < IDLength; i++ {
-		(*key)[i] = byteRep[i]
-	}
+
 	val, ok := network.Objects[*rpc.TargetID]
 	if ok {
 		return network.CreateRPC("find_value_response", *network.Self, rpc.TargetID, nil, val)
 	}
-	contactList := network.RoutingTable.FindClosestContacts(key, K)
+	contactList := network.RoutingTable.FindClosestContacts(rpc.TargetID, K)
 
 	return network.CreateRPC("find_value_response", *network.Self, nil, contactList, rpc.Value)
 }
 
-func (network *Network) updateRoutingTable(rpc RPC) {
-	for _, contact := range rpc.ContactList {
+func (network *Network) updateRoutingTable(contactList []Contact) {
+	for _, contact := range contactList {
 		bucketIndex := network.RoutingTable.getBucketIndex(contact.ID)
 		bucket := network.RoutingTable.buckets[bucketIndex]
 

@@ -10,7 +10,6 @@ import (
 
 type Kademlia struct {
 	Network *Network
-	Objects map[KademliaID]string
 }
 
 type Nodes struct {
