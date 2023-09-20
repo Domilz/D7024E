@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/Domilz/D7024E/pkg/kademlia"
@@ -8,6 +9,12 @@ import (
 
 func get(args []string, kademlia *kademlia.Kademlia) {
 	if len(args) == 1 {
+		decoded, _ := hex.DecodeString(args[0])
+		if len(decoded) < 20 {
+			fmt.Println("Insufficient argument")
+			return
+		}
+
 		data, err := kademlia.LookupData(args[0])
 		if err != nil {
 			fmt.Println(err)

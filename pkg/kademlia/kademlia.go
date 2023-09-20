@@ -182,31 +182,6 @@ func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialConta
 	return addedNewElement
 }
 
-// func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialContacts []Contact, target *KademliaID) bool {
-// 	var newList []Nodes
-// 	i := 0
-// 	j := 0
-// 	addedNewElement := false
-
-// 	for len(newList) < K && (i < len(*closestContacts) || j < len(potentialContacts)) {
-// 		if j == len(potentialContacts) || !potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
-// 			newList = append(newList, (*closestContacts)[i])
-// 			i++
-// 		} else {
-// 			potentialContacts[j].distance = potentialContacts[j].ID.CalcDistance(target)
-// 			if !Find(&newList, potentialContacts[j]) {
-// 				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
-// 			}
-// 			addedNewElement = true
-// 			j++
-// 		}
-// 	}
-
-// 	*closestContacts = newList
-
-// 	return addedNewElement
-// }
-
 func Find(list *[]Nodes, contact Contact) bool {
 	for _, ele := range *list {
 		if ele.contact.ID.Equals(contact.ID) {
@@ -217,36 +192,26 @@ func Find(list *[]Nodes, contact Contact) bool {
 }
 
 func (kademlia *Kademlia) LookupData(hash string) (NodeWithValue, error) {
-	byteRepresentation := []byte(hash)
-	var target KademliaID
-	for i := 0; i < IDLength; i++ {
-		target[i] = byteRepresentation[i]
-	}
-	fmt.Println("Past byteRepresentation")
-	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(&target, K)
+	target := NewKademliaID(hash)
+	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target, K)
 	var closestContacts []Nodes
-	fmt.Println("Getting closeToTarget")
 	for i, _ := range closeToTarget {
 		newNode := Nodes{contact: &closeToTarget[i], visited: false}
 		closestContacts = append(closestContacts, newNode)
 	}
-	fmt.Println("Finished closeToTarget")
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	valueCh := make(chan NodeWithValue)
 	mainCh := make(chan bool)
 
-	fmt.Println("Enter getClosestFromLookupData")
-	go kademlia.getClosestFromLookupData(ctx, cancel, mainCh, valueCh, &closestContacts, &target, hash)
+	go kademlia.getClosestFromLookupData(ctx, cancel, mainCh, valueCh, &closestContacts, target, hash)
 
 	select {
 	case value := <-valueCh:
-		fmt.Println("Got value")
 		cancel()
 		return value, nil
 	case <-mainCh:
-		fmt.Println("Could not find data")
 		return NodeWithValue{}, fmt.Errorf("could not find data")
 	}
 }
