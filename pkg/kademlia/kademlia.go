@@ -48,9 +48,11 @@ func NewKademlia() *Kademlia {
 
 	switch container {
 	case "1":
+		fmt.Println("Bootstrap joined")
 		contact = bootstrap_contact
 		routingTable = NewRoutingTable(contact)
 	default:
+		fmt.Println("Normal joined")
 		hostname, err := os.Hostname()
 		if err != nil {
 			fmt.Println("error hostname lookup for kademlia node:", err)
@@ -78,6 +80,7 @@ func (kademlia *Kademlia) JoinNetwork() {
 }
 
 func (kademlia Kademlia) LookupContact(target Contact) []Contact {
+	fmt.Println(kademlia.Network.Self.ID, "is performing lookup")
 	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target.ID, K)
 	var closestContacts []Nodes
 	for i, _ := range closeToTarget {
@@ -162,23 +165,50 @@ func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialConta
 	addedNewElement := false
 
 	for len(newList) < K && (i < len(*closestContacts) || j < len(potentialContacts)) {
-		if j == len(potentialContacts) || !potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
+		if j == len(potentialContacts) {
 			newList = append(newList, (*closestContacts)[i])
 			i++
-		} else {
-			potentialContacts[j].distance = potentialContacts[j].ID.CalcDistance(target)
-			if !Find(&newList, potentialContacts[j]) {
-				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
-			}
-			addedNewElement = true
+		} else if i == len(*closestContacts) {
+			newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
 			j++
+		} else {
+			if !potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
+				newList = append(newList, (*closestContacts)[i])
+				i++
+			} else {
+				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
+				j++
+				addedNewElement = true
+			}
 		}
 	}
-
-	*closestContacts = newList
-
 	return addedNewElement
 }
+
+// func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialContacts []Contact, target *KademliaID) bool {
+// 	var newList []Nodes
+// 	i := 0
+// 	j := 0
+// 	addedNewElement := false
+
+// 	for len(newList) < K && (i < len(*closestContacts) || j < len(potentialContacts)) {
+// 		if j == len(potentialContacts) || !potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
+// 			newList = append(newList, (*closestContacts)[i])
+// 			i++
+// 		} else {
+// 			potentialContacts[j].distance = potentialContacts[j].ID.CalcDistance(target)
+// 			if !Find(&newList, potentialContacts[j]) {
+// 				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
+// 			}
+// 			addedNewElement = true
+// 			j++
+// 		}
+// 	}
+
+// 	*closestContacts = newList
+
+// 	return addedNewElement
+// }
 
 func Find(list *[]Nodes, contact Contact) bool {
 	for _, ele := range *list {
@@ -276,7 +306,7 @@ func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
 	c := NewContact(&dataID, "")
 	contacts := kademlia.LookupContact(c)
 	successfully := false
-	fmt.Println(contacts)
+	fmt.Println("Lookup gives: ", contacts)
 	for _, contact := range contacts {
 		_, err := kademlia.Network.SendStoreMessage(contact, data)
 		if err == nil {

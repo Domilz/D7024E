@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Domilz/D7024E/pkg/cli"
 	"github.com/Domilz/D7024E/pkg/kademlia"
@@ -19,10 +20,13 @@ func main() {
 	isBootstrap := os.Getenv("ISBOOTSTRAP")
 
 	if isBootstrap == "0" {
+		time.Sleep(5 * time.Second)
 		kademliaNode.JoinNetwork()
 	}
 
-	go kademlia.Listen(localIP, "8080", kademliaNode)
+	port := os.Getenv("NODE_PORT")
+
+	go kademlia.Listen(localIP, port, kademliaNode)
 
 	cli.CLI(kademliaNode)
 }

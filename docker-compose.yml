@@ -32,7 +32,7 @@ services:
     environment:
       - BOOTSTRAP_NODE_IP=bootstrap-node
       - NODE_PORT=8080
-      - ISBOOTSTRAP = 1
+      - ISBOOTSTRAP=1
   kademlianodes:
     build: 
       dockerfile: Dockerfile
@@ -58,7 +58,7 @@ services:
     environment:
       - BOOTSTRAP_NODE_IP=bootstrap-node
       - NODE_PORT=8080 
-      - ISBOOTSTRAP = 0
+      - ISBOOTSTRAP=0
 networks:
   kademlia_network:
 

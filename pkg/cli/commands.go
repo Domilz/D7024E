@@ -25,7 +25,7 @@ func put(args []string, kademlia *kademlia.Kademlia) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Printf("Hash := %v", hash)
+			fmt.Println("Hash :=", hash.String())
 		}
 	} else {
 		fmt.Println("Bad argument")

@@ -52,7 +52,7 @@ func (network *Network) sendMessage(address string, msg []byte) ([]byte, error) 
 	ch := make(chan []byte)
 
 	go func() {
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, 2048)
 		n, _, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			fmt.Println(fmt.Errorf("Dont worry only error reading from UDP in sendMessage: %w ", err))
@@ -67,7 +67,6 @@ func (network *Network) sendMessage(address string, msg []byte) ([]byte, error) 
 	}
 
 	// fmt.Println("Message sent to UDP server:", string(msg))
-	//fmt.Println("Message sent to UDP server:", string(msg))
 
 	timeout := 4 * time.Second
 
@@ -94,7 +93,6 @@ func (network *Network) handleMessages(content []byte) RPC {
 	switch rpc.Topic {
 
 	case "ping":
-		fmt.Println("in ping")
 		return network.CreateRPC("pong", *network.Self, nil, nil, "")
 	case "find_node":
 		return network.findNode(rpc)
@@ -250,14 +248,14 @@ func GetLocalIP() string {
 		fmt.Println(fmt.Errorf("error IP lookup: %w", err))
 	}
 
-	return string(localIP[0])
+	return localIP[0].String()
 }
 
 func UDPServer(address string) (*net.UDPConn, error) {
 	serverAddr, err := net.ResolveUDPAddr("udp", address)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error resolving UDPAddr: %w", err)
+		return nil, fmt.Errorf("error resolving UDPAddr: %w", err)
 	}
 	fmt.Println("Server address:", serverAddr)
 
