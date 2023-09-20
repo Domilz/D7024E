@@ -169,13 +169,13 @@ func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialConta
 			newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
 			j++
 		} else {
-			if !potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
-				newList = append(newList, (*closestContacts)[i])
-				i++
-			} else {
+			if potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
 				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
 				j++
 				addedNewElement = true
+			} else {
+				newList = append(newList, (*closestContacts)[i])
+				i++
 			}
 		}
 	}
