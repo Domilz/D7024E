@@ -125,14 +125,12 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 		fmt.Println("Marshal ping error", err)
 	}
 
-	response, err := network.sendMessage(contact.Address, message)
+	_, err = network.sendMessage(contact.Address, message)
 	if err != nil {
 		fmt.Println("Pong failed:", err)
 		return false
 
 	} else {
-		fmt.Println("Recieved pong:", response)
-
 		return true
 	}
 }

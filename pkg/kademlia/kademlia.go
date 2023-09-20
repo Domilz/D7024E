@@ -26,7 +26,7 @@ type NodeWithValue struct {
 const (
 	DefaultBootstrapInput = "FFFFFFFF00000000000000000000000000000000"
 	Alpha                 = 3
-	K                     = 3
+	K                     = 5
 )
 
 var (
@@ -169,16 +169,21 @@ func (kademlia Kademlia) UpdateContacts(closestContacts *[]Nodes, potentialConta
 			newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
 			j++
 		} else {
-			if potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.distance) {
+			if potentialContacts[j].ID.CalcDistance(target).Less((*closestContacts)[i].contact.ID.CalcDistance(target)) {
 				newList = append(newList, Nodes{contact: &(potentialContacts)[j], visited: false})
 				j++
 				addedNewElement = true
+			} else if *potentialContacts[j].ID == *(*closestContacts)[i].contact.ID {
+				newList = append(newList, (*closestContacts)[i])
+				i++
+				j++
 			} else {
 				newList = append(newList, (*closestContacts)[i])
 				i++
 			}
 		}
 	}
+
 	return addedNewElement
 }
 
