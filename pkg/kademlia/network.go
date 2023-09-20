@@ -86,7 +86,6 @@ func (network *Network) handleMessages(content []byte) RPC {
 		fmt.Println("Unmarshal handleMessage error", err)
 	}
 
-	fmt.Println("Topic: ", rpc.Topic)
 	var cList []Contact
 	cList = append(cList, rpc.Contact)
 	network.updateRoutingTable(cList)
@@ -107,6 +106,7 @@ func (network *Network) handleMessages(content []byte) RPC {
 
 func (network *Network) WriteResponse(response RPC, rAddr *net.UDPAddr, conn *net.UDPConn) {
 	byteResponse, err := json.Marshal(response)
+
 	if err != nil {
 		fmt.Println("Json marshal WriteResponse error", err)
 	}
@@ -117,7 +117,6 @@ func (network *Network) WriteResponse(response RPC, rAddr *net.UDPAddr, conn *ne
 }
 
 func (network *Network) SendPingMessage(contact *Contact) bool {
-	fmt.Println("Sending ping to address,", contact.Address)
 
 	rpc := network.CreateRPC("ping", *network.Self, nil, nil, "")
 
@@ -132,8 +131,8 @@ func (network *Network) SendPingMessage(contact *Contact) bool {
 		return false
 
 	} else {
-		network.updateRoutingTable([]Contact{*contact})
 		fmt.Println("Recieved pong:", response)
+
 		return true
 	}
 }
@@ -168,7 +167,6 @@ func (network *Network) SendFindContactMessage(contact *Contact, targetID *Kadem
 
 func (network *Network) SendFindDataMessage(contact *Contact, hash string) ([]Contact, string) {
 	kadID := NewKademliaID(hash)
-	fmt.Println("kadID: ", kadID)
 	rpc := network.CreateRPC("find_data", *network.Self, kadID, nil, "")
 
 	message, err := json.Marshal(rpc)

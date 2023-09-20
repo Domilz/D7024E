@@ -48,11 +48,9 @@ func NewKademlia() *Kademlia {
 
 	switch container {
 	case "1":
-		fmt.Println("Bootstrap joined")
 		contact = bootstrap_contact
 		routingTable = NewRoutingTable(contact)
 	default:
-		fmt.Println("Normal joined")
 		hostname, err := os.Hostname()
 		if err != nil {
 			fmt.Println("error hostname lookup for kademlia node:", err)
@@ -80,7 +78,6 @@ func (kademlia *Kademlia) JoinNetwork() {
 }
 
 func (kademlia Kademlia) LookupContact(target Contact) []Contact {
-	fmt.Println(kademlia.Network.Self.ID, "is performing lookup")
 	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(target.ID, K)
 	var closestContacts []Nodes
 	for i, _ := range closeToTarget {
@@ -225,25 +222,31 @@ func (kademlia *Kademlia) LookupData(hash string) (NodeWithValue, error) {
 	for i := 0; i < IDLength; i++ {
 		target[i] = byteRepresentation[i]
 	}
+	fmt.Println("Past byteRepresentation")
 	closeToTarget := kademlia.Network.RoutingTable.FindClosestContacts(&target, K)
 	var closestContacts []Nodes
+	fmt.Println("Getting closeToTarget")
 	for i, _ := range closeToTarget {
 		newNode := Nodes{contact: &closeToTarget[i], visited: false}
 		closestContacts = append(closestContacts, newNode)
 	}
+	fmt.Println("Finished closeToTarget")
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	valueCh := make(chan NodeWithValue)
 	mainCh := make(chan bool)
 
+	fmt.Println("Enter getClosestFromLookupData")
 	go kademlia.getClosestFromLookupData(ctx, cancel, mainCh, valueCh, &closestContacts, &target, hash)
 
 	select {
 	case value := <-valueCh:
+		fmt.Println("Got value")
 		cancel()
 		return value, nil
 	case <-mainCh:
+		fmt.Println("Could not find data")
 		return NodeWithValue{}, fmt.Errorf("could not find data")
 	}
 }
@@ -306,7 +309,6 @@ func (kademlia *Kademlia) Store(data []byte) (KademliaID, error) {
 	c := NewContact(&dataID, "")
 	contacts := kademlia.LookupContact(c)
 	successfully := false
-	fmt.Println("Lookup gives: ", contacts)
 	for _, contact := range contacts {
 		_, err := kademlia.Network.SendStoreMessage(contact, data)
 		if err == nil {
