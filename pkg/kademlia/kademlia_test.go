@@ -1,9 +1,9 @@
 package kademlia
 
 import (
+	"fmt"
 	"testing"
 	"time"
-
 
 	"github.com/stretchr/testify/assert"
 )
@@ -72,6 +72,7 @@ func TestLookup(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	contacts := kademlia1.LookupContact(contact1)
+	fmt.Println("helo", contacts)
 	var idList []KademliaID
 	for _, contact := range contacts {
 		idList = append(idList, *contact.ID)
